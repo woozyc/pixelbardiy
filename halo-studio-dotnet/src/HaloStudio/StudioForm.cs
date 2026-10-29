@@ -8,11 +8,15 @@ public sealed partial class StudioForm : Form
     readonly PixelPreview preview = new() { Dock = DockStyle.Fill };
     readonly Panel body = new() { Dock = DockStyle.Fill };
     readonly Label heading = Label("主题与屏幕", 21, true), subtitle = Label("", 9), status = Label("正在连接", 9), song = Label("", 9), performance = Label("", 8);
-    readonly Label musicTitle = Label("等待网易云播放", 18, true), lyric = Label("歌词将在这里同步出现", 13), musicDetail = Label("", 9), thermal = Hint("正在检查独立温度采集"), demoStatus = Label("准备播放", 11, true);
+    readonly Label musicTitle = Label("等待网易云或 Apple Music 播放", 18, true), lyric = Label("歌词将在这里同步出现", 13), musicDetail = Label("", 9), thermal = Hint("正在检查独立温度采集"), demoStatus = Label("准备播放", 11, true);
     readonly Label colorStatus = Label("", 9), sidebarStatus = Label("正在连接", 9), sidebarTemp = Label("CPU 温度  —", 9);
     readonly ProgressBar demoProgress = new() { Height = 5, Width = 680, Maximum = 1000, Margin = new(0, 10, 0, 10) };
     readonly List<Action> bindings = []; readonly List<ThemeTile> tiles = []; readonly List<ModernButton> navigation = []; readonly List<PagePanel> pages = []; readonly List<ColorSwatch> swatches = [];
-    readonly ThemeGallery gallery = new();
+    readonly ThemeGallery gallery = new(250), clockGallery = new(250);
+    readonly ModernButton monitorExpand = Button("展开更多  ▾", () => { }), clockExpand = Button("展开更多  ▾", () => { });
+    readonly ModernButton officialExpand = Button("TempoHub 官方配色  ▸", () => { });
+    readonly FlowLayoutPanel officialContent = Stack();
+    bool monitorExpanded, clockExpanded, officialExpanded;
     readonly FlowLayoutPanel colorChips = Row();
     readonly FlowLayoutPanel officialChips = Row();
     readonly MetricPicker metrics = new();
@@ -110,9 +114,9 @@ public sealed partial class StudioForm : Form
             status.Text = previewMode ? "离线预览" : value.Connected ? "●  USB 已连接" : value.Status; status.ForeColor = value.Connected ? Color.FromArgb(28, 150, 111) : Palette.Muted;
             sidebarStatus.Text = value.Connected ? "●  Halo PixelBar 在线" : "○  等待音响连接"; sidebarStatus.ForeColor = status.ForeColor;
             sidebarTemp.Text = "CPU 温度  " + value.Snapshot.Get("cpu_temp").Text();
-            song.Text = value.TelemetryActive ? value.Frame?.Text ?? "驾驶遥测" : value.DemoStage.Length > 0 ? value.DemoStage : value.Track.Title.Length > 0 ? (value.Track.Playing ? "正在播放  " : "已暂停  ") + value.Track.Title + " · " + value.Track.Artist : "默认显示 · " + (current.IdleContent == "clock" ? "时钟" : "系统监控");
+            song.Text = value.TelemetryActive ? value.Frame?.Text ?? "驾驶遥测" : value.DemoStage.Length > 0 ? value.DemoStage : value.Track.Title.Length > 0 ? (value.Track.Playing ? "正在播放  " : "已暂停  ") + value.Track.Title + " · " + value.Track.Artist : "默认显示 · " + (current.WantsMonitor ? "系统监控" : "时钟");
             performance.Text = $"CPU {value.CpuPercent:F2}%   ·   内存 {value.MemoryMB:F0} MB   ·   {value.Frames} 帧已确认   ·   {value.FrameSeconds:F2} s / 帧";
-            musicTitle.Text = value.Track.Title.Length > 0 ? value.Track.Title + "  /  " + value.Track.Artist : "等待网易云播放";
+            musicTitle.Text = value.Track.Title.Length > 0 ? value.Track.Title + "  /  " + value.Track.Artist : "等待网易云或 Apple Music 播放";
             lyric.Text = value.Frame?.Identity.StartsWith("歌词:") == true ? value.Frame.Text : value.Track.RealtimeLyric.Length > 0 ? value.Track.RealtimeLyric : "暂无当前句";
             musicDetail.Text = value.Track.Provider + " · " + value.Status; thermal.Text = value.TemperatureStatus;
             demoStatus.Text = value.DemoStage.Length > 0 ? value.DemoStage : "准备播放 · 结束后自动回到日常"; demoProgress.Value = Math.Clamp((int)(value.DemoProgress * 1000), 0, 1000);
@@ -177,10 +181,39 @@ public sealed partial class StudioForm : Form
     public void ApplyTestSettings(Settings s) { current = s.Validated(); engine.Configure(current); Sync(); }
     void LoadThemes()
     {
-        gallery.SuspendLayout(); foreach (var tile in tiles) tile.Dispose(); tiles.Clear(); gallery.Controls.Clear();
-        foreach (var (key, design) in Designs.All) { var tile = new ThemeTile(key, design, current); tile.Click += (_, _) => Set(current with { Theme = tile.Key, Themes = true }); gallery.Controls.Add(tile); tiles.Add(tile); }
-        gallery.ResumeLayout(true);
-
+        gallery.SuspendLayout(); clockGallery.SuspendLayout();
+        foreach (var tile in tiles) tile.Dispose(); tiles.Clear(); gallery.Controls.Clear(); clockGallery.Controls.Clear();
+        string[] pinned = ["ion", "matrix", "amber"];
+        foreach (var (key, design) in Designs.All.OrderBy(p => { int i = Array.IndexOf(pinned, p.Key); return i < 0 ? pinned.Length : i; }))
+        {
+            var tile = new ThemeTile(key, design, current with { MonitorEnabled = design.Monitor });
+            if (AutoScaleMode == AutoScaleMode.Dpi) tile.Scale(new SizeF(DeviceDpi / 96f, DeviceDpi / 96f));
+            tile.Click += (_, _) => SelectTheme(tile.Key);
+            (design.Monitor ? gallery : clockGallery).Controls.Add(tile); tiles.Add(tile);
+        }
+        UpdateThemeGroups(); gallery.ResumeLayout(true); clockGallery.ResumeLayout(true);
+    }
+    void SelectTheme(string key) => Set(current with { Theme = key, Themes = true, MonitorEnabled = Designs.All[key].Monitor });
+    void UpdateThemeGroups()
+    {
+        void Update(ThemeGallery group, ModernButton button, bool expanded)
+        {
+            group.DisplayLimit = expanded ? int.MaxValue : 3;
+            button.Visible = group.Controls.Count > 3;
+            button.Text = expanded ? "收起  ▴" : $"展开其余 {Math.Max(0, group.Controls.Count - 3)} 个  ▾";
+            button.Width = Palette.Px(button, 200);
+        }
+        Update(gallery, monitorExpand, monitorExpanded); Update(clockGallery, clockExpand, clockExpanded);
+        pages[0].PerformLayout();
+    }
+    void SetOfficialExpanded(bool expanded)
+    {
+        officialExpanded = expanded; officialContent.Visible = expanded;
+        officialExpand.Text = expanded ? "TempoHub 官方配色  ▾" : "TempoHub 官方配色  ▸";
+        officialExpand.AccessibleDescription = expanded ? "点击收起官方配色" : "点击展开 30 个官方配色";
+        // Reflow even when hiding leaves the content's cached size unchanged.
+        if (officialContent.Parent?.Parent?.Tag is Action reflow) reflow();
+        pages[0].PerformLayout();
     }
     void ReloadThemes() { Safe(() => { var errors = Designs.Reload(Designs.DirectoryPath); current = current.Validated(); engine.Configure(current); LoadThemes(); Sync(); if (errors.Length > 0) MessageBox.Show(this, string.Join("\n", errors), "部分主题未能加载"); }); }
     void StartDemo() { Safe(engine.StartShowcase); SelectPage(3); }

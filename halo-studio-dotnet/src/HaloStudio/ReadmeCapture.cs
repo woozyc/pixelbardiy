@@ -37,7 +37,7 @@ public sealed partial class StudioForm
             status.Text = "离线功能演示"; sidebarStatus.Text = "○  离线功能演示"; sidebarTemp.Text = "CPU 温度  —";
             song.Text = "星际来信 · 原创演示歌词"; performance.Text = "演示数据 · 未连接音响";
             thermal.Text = "首次使用：独立温度采集关闭";
-            musicTitle.Text = "星际来信 / 原创演示"; lyric.Text = verses[0]; musicDetail.Text = "网易云歌词显示 · 此截图使用原创演示文本";
+            musicTitle.Text = "星际来信 / 原创演示"; lyric.Text = verses[0]; musicDetail.Text = "网易云 / Apple Music 歌词 · 原创演示文本";
             UpdateSensors(demo); PerformLayout(); Application.DoEvents();
             if(page==5) { pages[5].AutoScrollPosition=new Point(0,telemetryGallery.Top+telemetryTiles.Single(t=>t.Key==current.TelemetryTheme).Top); Application.DoEvents(); }
             // DrawToBitmap's non-client frame uses classic GDI decorations,

@@ -15,7 +15,7 @@ public sealed class Engine : IAsyncDisposable
     public void StartShowcase() { StopTelemetryDemo(); Volatile.Write(ref showcase, new Showcase(Path.Combine(AppContext.BaseDirectory, "demos", "showcase.json"))); Interlocked.Increment(ref revision); }
     public void StopShowcase() { Volatile.Write(ref showcase, null); Interlocked.Increment(ref revision); }
     RamController? controller; IHaloTransport? link; Task? runner; Track track = new(); Snapshot snapshot = Snapshot.Empty;
-    PixelFrame? frame; double signal; string? rhythmColor; volatile bool rhythmActive; string status = "离线预览"; List<LyricLine> lines = []; string lyricSource = "等待网易云播放";
+    PixelFrame? frame; double signal; string? rhythmColor; volatile bool rhythmActive; string status = "离线预览"; List<LyricLine> lines = []; string lyricSource = "等待网易云或 Apple Music 播放";
     readonly object logGate = new(); public event Action<StudioState>? Changed;
     readonly LyricPlayback lyricPlayback = new(); int lyricImportRevision;
     public Settings Config => Volatile.Read(ref settings);

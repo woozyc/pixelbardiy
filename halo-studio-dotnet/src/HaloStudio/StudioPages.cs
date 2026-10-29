@@ -4,30 +4,46 @@ public sealed partial class StudioForm
 {
     void BuildDisplay()
     {
-        var p = pages[0]; p.Controls.Add(gallery);
-        p.Controls.Add(Hint("开启硬件监控后，原有六套主题及新增监控主题显示监控；纯表盘主题继续显示时钟。"));
+        var p = pages[0];
+        var monitors = Card(p, "监控主题", "选择后显示电脑状态；也可在下方切回时钟。", fullWidth: true);
+        monitors.Controls.Add(gallery); monitors.Controls.Add(monitorExpand);
+        monitorExpand.Click += (_, _) => { monitorExpanded = !monitorExpanded; UpdateThemeGroups(); };
+        var clocks = Card(p, "时钟主题", "只显示时钟，不切换系统监控；开启自动歌词后，播放音乐时仍会显示歌词。", fullWidth: true);
+        clocks.Controls.Add(clockGallery); clocks.Controls.Add(clockExpand);
+        clockExpand.Click += (_, _) => { clockExpanded = !clockExpanded; UpdateThemeGroups(); };
         var colors = Card(p, "主题配色", "色卡与预览依据实屏观感近似显示。整屏共色，每个主题独立保存。");
         colors.Controls.Add(colorStatus); colors.Controls.Add(colorChips); LoadColorChips();
         colors.Controls.Add(Row(Button("设备 RGB…", PickThemeColor), Button("恢复主题原色", () => SetThemeColor(null))));
-        colors.Controls.Add(Hint("以上为主题／校准快捷色，按色相排列、白色置后。下方官方配色单独保留原始 RGB。"));
+        colors.Controls.Add(Hint("主题与校准快捷色按色相排列，白色置后。需要原厂色值时，展开下方 TempoHub 配色。"));
         colors.Controls.Add(Row(Button("打开配色文件夹", () => OpenFolder(Path.GetDirectoryName(ScreenPalette.FilePath)!)), Button("重新加载色表", ReloadColors)));
         Setting(colors, "白色偏蓝校正", "仅用于主题／校准白色；官方配色不受影响，255 为关闭", Number("白色蓝色分量", 0, 255, () => current.ScreenWhiteBlue, v => Set(current with { ScreenWhiteBlue = (int)v })));
-        var daily = Card(p, "日常显示");
-        Setting(daily, "屏幕显示", "关闭后恢复原厂时钟", Toggle("屏幕显示", () => current.Enabled, v => Set(current with { Enabled = v })));
-        Setting(daily, "硬件监控", "开启后，带监控的主题显示监控仪表；关闭则显示表盘。不会自动轮换。", Toggle("显示硬件监控", () => current.MonitorEnabled, v => Set(current with { MonitorEnabled = v })));
-        Setting(daily, "播放音乐时", "自动跟随网易云当前歌词", Combo("播放音乐时", [("auto", "自动显示歌词"), ("idle", "保持默认画面")], () => current.Mode, v => Set(current with { Mode = v })));
-        Setting(daily, "秒数", "时钟显示秒数", Toggle("显示秒数", () => current.Seconds, v => Set(current with { Seconds = v })));
-        Setting(daily, "主题设计", "使用选中主题的布局与装饰", Toggle("主题设计", () => current.Themes, v => Set(current with { Themes = v })));
-        daily.Controls.Add(Hint("关闭“硬件监控”即可显示时钟；“自动显示歌词”仍会在播放音乐时优先显示歌词。旧版的默认画面选择会自动保留。"));
-        var motion = Card(p, "动画与创作");
-        Setting(motion, "装饰动画", "让主题中的图案缓慢变化", Toggle("装饰动画", () => current.Animations, v => Set(current with { Animations = v })));
-        Setting(motion, "切换动画", "画面轮换时使用 MCU 本地过渡", Toggle("切换动画", () => current.Transitions, v => Set(current with { Transitions = v })));
-        Setting(motion, "切换形式", "主题切换自动展开或溶解；同主题内容使用下方形式", Combo("切换形式", [("up", "向上推入"), ("wipe", "横向揭幕"), ("center", "中心展开"), ("dissolve", "像素溶解")], () => current.PixelTransition, v => Set(current with { PixelTransition = v })));
-        motion.Controls.Add(Row(Button("打开主题文件夹", () => OpenFolder(Designs.DirectoryPath)), Button("重新加载主题", ReloadThemes)));
-        var official = Card(p, "官方配色 · TempoHub", "30 个原厂预设，按色相排列、白色置后。名称由 HaloStudio 添加；色号与官方一致，实屏可能有色差。", fullWidth: true);
-        official.Controls.Add(officialChips);
-        official.Controls.Add(Button("官方 RGB…", () => PickThemeColor(true)));
-        official.Controls.Add(Hint("官方预设与自由取色均直接发送 RGB，不额外调色。选择结果按主题保存；原有主题颜色不会自动替换。"));
+        colors.Controls.Add(officialExpand);
+        officialContent.AutoSize = true; officialContent.AutoSizeMode = AutoSizeMode.GrowAndShrink; officialContent.BackColor = Palette.Card;
+        officialContent.Controls.Add(Hint("30 个原厂预设，直接发送原始 RGB，不应用白色校正。颜色按主题保存，实屏可能有色差。"));
+        officialContent.Controls.Add(officialChips);
+        officialContent.Controls.Add(Button("选择官方 RGB…", () => PickThemeColor(true)));
+        officialContent.SizeChanged += (_, _) =>
+        {
+            int w = officialContent.ClientSize.Width;
+            officialChips.MaximumSize = new(w, 0); officialChips.Width = w;
+            foreach (var label in officialContent.Controls.OfType<Label>()) label.MaximumSize = new(w, 0);
+        };
+        colors.Controls.Add(officialContent); officialContent.Visible = false;
+        officialExpand.Click += (_, _) => SetOfficialExpanded(!officialExpanded);
+
+        var daily = Card(p, "显示内容", "决定平时显示什么，以及音乐播放时是否切换歌词。");
+        Setting(daily, "接管音响屏幕", "关闭后恢复原厂时钟", Toggle("接管音响屏幕", () => current.Enabled, v => Set(current with { Enabled = v })));
+        Setting(daily, "空闲时显示", "监控主题支持两种内容；纯时钟主题始终显示时钟", Combo("空闲时显示", [("clock", "时钟"), ("monitor", "系统监控")], () => current.MonitorEnabled ? "monitor" : "clock", v => Set(current with { MonitorEnabled = v == "monitor" })));
+        Setting(daily, "音乐播放时", "支持网易云音乐和 Windows 版 Apple Music", Combo("音乐播放时", [("auto", "自动显示歌词"), ("idle", "保持时钟或监控")], () => current.Mode, v => Set(current with { Mode = v })));
+        daily.Controls.Add(Hint("歌词结束后回到时钟或监控；驾驶遥测收到游戏数据时优先显示游戏仪表。"));
+
+        var motion = Card(p, "画面样式与动效", "调整静态外观和换页效果，不改变显示内容。");
+        Setting(motion, "使用主题排版", "关闭后使用简洁布局，保留当前内容与颜色", Toggle("使用主题排版", () => current.Themes, v => Set(current with { Themes = v })));
+        Setting(motion, "时钟显示秒数", "仅影响支持秒数的时钟布局", Toggle("时钟显示秒数", () => current.Seconds, v => Set(current with { Seconds = v })));
+        Setting(motion, "图案动态效果", "让主题装饰缓慢变化；关闭后保留静态图案", Toggle("图案动态效果", () => current.Animations, v => Set(current with { Animations = v })));
+        Setting(motion, "换页过渡动画", "用于歌词换句、监控轮换和主题切换", Toggle("换页过渡动画", () => current.Transitions, v => Set(current with { Transitions = v })));
+        Setting(motion, "内容换页效果", "开启过渡后生效；切换主题时自动使用展开或溶解", Combo("内容换页效果", [("up", "向上推入"), ("wipe", "横向揭幕"), ("center", "中心展开"), ("dissolve", "像素溶解")], () => current.PixelTransition, v => Set(current with { PixelTransition = v })));
+
     }
     void BuildMonitor()
     {
@@ -56,14 +72,15 @@ public sealed partial class StudioForm
     void BuildMusic()
     {
         var p = pages[2]; var now = Card(p, "正在聆听", fullWidth: true); now.Controls.Add(musicTitle); now.Controls.Add(lyric); now.Controls.Add(musicDetail);
-        var lrc = Card(p, "歌词同步");
-        Setting(lrc, "联网匹配歌词", "优先完整时间轴；没有进度时按网易云换句对齐", Toggle("联网匹配歌词", () => current.Online, v => Set(current with { Online = v })));
+        var lrc = Card(p, "歌词同步", "支持网易云音乐与 Windows 版 Apple Music。自动识别正在播放的播放器，无需切换来源。");
+        lrc.Controls.Add(Hint("Apple Music 通过 Windows 系统媒体控制提供歌曲和进度，再联网匹配歌词；不读取 Apple Music 自带歌词。未匹配到时可导入 LRC。"));
+        Setting(lrc, "联网匹配歌词", "通过网易云／LRCLIB 匹配歌词；也可使用缓存或本地 LRC", Toggle("联网匹配歌词", () => current.Online, v => Set(current with { Online = v })));
         Setting(lrc, "刷新延迟补偿", "默认提前 0.8 秒，可与手动偏移叠加", Number("刷新延迟补偿", 0, 3, () => (decimal)current.LyricLeadSeconds, v => Set(current with { LyricLeadSeconds = (double)v }), 1));
         Setting(lrc, "时间轴偏移", "秒；正值再提前，负值延后。Enter 或点击空白处应用", Number("时间轴偏移", -30, 30, () => (decimal)current.Offset, v => Set(current with { Offset = (double)v }), 1)); lrc.Controls.Add(Button("导入 LRC 文件", ImportLrc));
         lrc.Controls.Add(Hint("有逐字／逐词时间戳时，按主题宽度分成短句并准时换页；否则仅显示开头… → …结尾，预留传输耗时让结尾至少占半程。未知时间轴时尽早显示结尾。"));
         var light = Card(p, "音乐氛围灯");
         Setting(light, "氛围灯", "控制音响两侧灯光", Toggle("氛围灯", () => current.AmbientEnabled, v => Set(current with { AmbientEnabled = v })));
-        Setting(light, "跟随音乐强弱", "读取实际声音峰值，音量固定也能律动", Toggle("跟随音乐强弱", () => current.Rhythm, v => Set(current with { Rhythm = v })));
+        Setting(light, "跟随音乐强弱", "目前采样网易云音频峰值，音量固定也能律动；Apple Music 暂不支持此项", Toggle("跟随音乐强弱", () => current.Rhythm, v => Set(current with { Rhythm = v })));
         Setting(light, "律动方式", "主题配色同步作为律动主色", Combo("律动方式", [("pulse", "连续能量起伏"), ("color", "主题双色变化"), ("beat", "节拍脉冲")], () => current.RhythmStyle, v => Set(current with { RhythmStyle = v })));
         Setting(light, "动态对比", "提高数值会增强明暗差异", Number("动态对比", .4m, 6, () => (decimal)current.RhythmGain, v => Set(current with { RhythmGain = (double)v }), 1));
         var ambient = Card(p, "基础灯效");
@@ -89,7 +106,7 @@ public sealed partial class StudioForm
         Setting(run, "开机后台启动", "登录 Windows 后自动运行 HaloStudio", boot);
         Setting(run, "资源配置", "隐藏窗口时暂停界面绘制", Combo("资源配置", [("eco", "节能 · 音频采样 20 Hz"), ("balanced", "均衡 · 音频采样 30 Hz")], () => current.PowerProfile, v => Set(current with { PowerProfile = v })));
         var device = Card(p, "音响连接", "已验证的 MCU RAM 直绘、压缩与差分传输。"); device.Controls.Add(Row(Button("导入 MCU 验证记录", ImportDevice), Button("打开运行目录", () => OpenFolder(runtime))));
-        var files = Card(p, "创作与资源", "主题和演示在运行时读取，新增主题无需重新编译。"); files.Controls.Add(Row(Button("主题文件夹", () => OpenFolder(Designs.DirectoryPath)), Button("演示文件夹", () => OpenFolder(Path.Combine(AppContext.BaseDirectory, "demos")))));
+        var files = Card(p, "创作与资源", "主题和演示在运行时读取，新增主题无需重新编译。"); files.Controls.Add(Row(Button("重新加载主题", ReloadThemes), Button("主题文件夹", () => OpenFolder(Designs.DirectoryPath)), Button("演示文件夹", () => OpenFolder(Path.Combine(AppContext.BaseDirectory, "demos")))));
         var about = Card(p, "HaloStudio", "Halo PixelBar 屏幕与灯光控制"); about.Controls.Add(Hint("关闭窗口会隐藏到托盘。退出或切换旧版时先释放显示权，恢复原厂时钟。")); about.Controls.Add(Button("退出并恢复原厂显示", async () => await QuitAsync()));
         var legacy = new LinkLabel { Text = "切换到旧版本", AutoSize = true, Font = Palette.Font(8), LinkColor = Palette.Muted, ActiveLinkColor = Palette.Accent, Margin = new(0, 16, 0, 4) };
         legacy.LinkClicked += async (_, _) => await SwitchLegacyAsync(); about.Controls.Add(legacy);
@@ -109,7 +126,7 @@ public sealed partial class StudioForm
             if (arranging) return; arranging = true;
             try {
                 int w = Math.Max(200, card.ClientSize.Width - card.Padding.Horizontal); stack.Location = new(card.Padding.Left, card.Padding.Top); stack.Width = w;
-                foreach (Control row in stack.Controls) { if (row is SettingRow or SensorTable or MetricPicker) row.Width = w; else if (row is FlowLayoutPanel flow) { flow.MaximumSize = new(w, 0); flow.Width = w; } else if (row is Label) row.MaximumSize = new(w, 0); else if (row is ProgressBar) row.Width = w; }
+                foreach (Control row in stack.Controls) { if (row is SettingRow or SensorTable or MetricPicker or ThemeGallery) row.Width = w; else if (row is FlowLayoutPanel flow) { flow.MaximumSize = new(w, 0); flow.Width = w; } else if (row is Label) row.MaximumSize = new(w, 0); else if (row is ProgressBar) row.Width = w; }
                 stack.PerformLayout();
                 if (maxHeight > 0 && stack.Controls.OfType<MetricPicker>().FirstOrDefault() is { } picker)
                 {

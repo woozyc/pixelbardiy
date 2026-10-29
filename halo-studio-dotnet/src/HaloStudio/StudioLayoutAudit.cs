@@ -10,6 +10,30 @@ public sealed partial class StudioForm
         Directory.CreateDirectory(directory); var evidence = new List<object>(); var failures = new List<string>();
         auditing = true;
         SelectPage(0); // PerformClick requires the palette controls to be visible.
+        var originalSettings = current;
+        if (officialExpanded || officialContent.Visible) failures.Add("Official palette must start collapsed");
+        if (gallery.DisplayLimit != 3 || clockGallery.DisplayLimit != 3) failures.Add("Theme groups must start collapsed to three");
+        if (!gallery.Controls.Cast<ThemeTile>().Take(3).Select(t => t.Key).SequenceEqual(new[] { "ion", "matrix", "amber" })) failures.Add("Pinned monitor theme order mismatch");
+        if (gallery.Controls.Cast<ThemeTile>().Any(t => !Designs.All[t.Key].Monitor) || clockGallery.Controls.Cast<ThemeTile>().Any(t => Designs.All[t.Key].Monitor)) failures.Add("Theme capability grouping mismatch");
+        int collapsedHeight = gallery.Height;
+        monitorExpand.PerformClick(); Application.DoEvents();
+        if (gallery.DisplayLimit != int.MaxValue || gallery.Height <= collapsedHeight) failures.Add("Theme group does not expand");
+        ReloadThemes();
+        if (!monitorExpanded || gallery.DisplayLimit != int.MaxValue) failures.Add("Reload loses expansion state");
+        monitorExpand.PerformClick(); Application.DoEvents();
+        if (gallery.DisplayLimit != 3 || gallery.Controls.Cast<Control>().Count(t => t.Visible) != 3) failures.Add("Theme group does not collapse");
+        if (System.Text.Json.JsonSerializer.Serialize(current, Files.Json) != System.Text.Json.JsonSerializer.Serialize(originalSettings, Files.Json)) failures.Add("Expanding or reloading changes settings");
+        SelectTheme("ion");
+        if (!current.WantsMonitor) failures.Add("Monitor theme selection does not enable monitoring");
+        SelectTheme("bunny");
+        if (current.MonitorEnabled || current.WantsMonitor) failures.Add("Clock theme selection leaves monitoring on");
+        if (current.Mode != originalSettings.Mode || current.MonitorView != originalSettings.MonitorView || !current.MonitorMetrics.SequenceEqual(originalSettings.MonitorMetrics)) failures.Add("Theme selection changes music policy or monitor layout");
+        ApplyTestSettings(originalSettings); LoadThemes(); Sync();
+        SetOfficialExpanded(true); Application.DoEvents();
+        int expandedColorHeight = officialContent.Parent!.Parent!.Height;
+        SetOfficialExpanded(false); Application.DoEvents();
+        if (officialContent.Parent!.Parent!.Height >= expandedColorHeight) failures.Add("Collapsing official palette leaves empty space");
+        SetOfficialExpanded(true);
         if(navigation[5].Top >= navigation[3].Top) failures.Add("Driving telemetry must precede demo theater");
         foreach(var tile in telemetryTiles)
         {
@@ -107,10 +131,19 @@ public sealed partial class StudioForm
                         paletteCard.DrawToBitmap(bitmap, new(Point.Empty, bitmap.Size));
                         bitmap.Save(Path.Combine(directory, $"{logicalWidth}-official-palette.png"));
                     }
-                    for (int i = 0; i < tiles.Count; i++)
+                    foreach (bool expand in new[] { false, true, false })
                     {
-                        if (tiles[i].Right > gallery.Width || tiles[i].Bottom > gallery.Height) failures.Add($"{logicalWidth}: tile outside gallery");
-                        for (int j = i+1; j < tiles.Count; j++) if (tiles[i].Bounds.IntersectsWith(tiles[j].Bounds)) failures.Add($"{logicalWidth}: overlapping tiles");
+                        monitorExpanded = clockExpanded = expand; UpdateThemeGroups(); Application.DoEvents();
+                        foreach (var group in new[] { gallery, clockGallery })
+                        {
+                            var shown = group.Controls.Cast<Control>().Where(t => t.Visible).ToArray();
+                            if (shown.Length != (expand ? group.Controls.Count : Math.Min(3, group.Controls.Count))) failures.Add($"{logicalWidth}: wrong visible theme count");
+                            for (int i = 0; i < shown.Length; i++)
+                            {
+                                if (shown[i].Right > group.Width || shown[i].Bottom > group.Height) failures.Add($"{logicalWidth}: tile outside group");
+                                for (int j = i + 1; j < shown.Length; j++) if (shown[i].Bounds.IntersectsWith(shown[j].Bounds)) failures.Add($"{logicalWidth}: overlapping themes");
+                            }
+                        }
                     }
                 }
                 if(page==5)
@@ -170,6 +203,8 @@ public sealed partial class StudioForm
                 combo.ValueChanged -= Changed;
             }
         }
+        SelectPage(0); SetOfficialExpanded(false);
+        ApplyTestSettings(originalSettings);
         auditing = false;
         Files.Save(Path.Combine(directory, "layout-report.json"), new { Passed = failures.Count == 0, Failures = failures, Evidence = evidence });
     }

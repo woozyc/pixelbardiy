@@ -6,15 +6,17 @@
 
 **该项目需要刷入新的音响MCU固件，有变砖风险，若无法接受请勿使用**
 
-HaloStudio 可以让 Edifier Halo PixelBar 显示网易云音乐歌词、电脑状态和自定义的像素画面。
+HaloStudio 可以让 Edifier Halo PixelBar 显示网易云音乐 / Apple Music 歌词、电脑状态和自定义的像素画面。
+
+> 2.8.0 新增 Apple Music 歌词支持、更多监控与时钟主题，并重新整理主题与配色设置。已安装并验证当前 MCU 固件的设备无需重刷。
 
 ## 主要功能
 
 - **USB 像素直绘**：刷入提供的 MCU 固件后，电脑可通过 USB 直接在音响屏幕上绘制和更新像素画面，更多自定义潜力。
 - **地平线 6 驾驶遥测（2.7.0）**：15 款复古车型仪表，收到游戏数据才接管屏幕；暂停或断流后恢复歌词、时钟或监控。支持独立的零百加速演示。已在真实游戏中验证自动进入、退出遥测和画面动画；[配置与主题说明](halo-studio-dotnet/docs/FORZA_TELEMETRY.md)。
 - **电脑性能监控**：显示 CPU、内存、网速、磁盘、显卡和可获取的温度、风扇转速。可以选择紧凑两行、双指标卡片、仪表或曲线等布局，也可以轮换显示。监控设计和硬件检测参考了 [TrafficMonitor](https://github.com/zhongyang219/TrafficMonitor)，感谢其开源项目；日常使用不需要先启动 TrafficMonitor。
-- **自定义主题与颜色**：内置六套风格不同的主题，时钟、监控和歌词都能使用；可以换颜色、选择动画，也可以通过编辑主题文件添加新设计。
-- **网易云音乐歌词**：播放时自动显示歌词，不必打开桌面歌词或让网易云停留在歌词页面。支持歌词时间调整和导入本地 LRC 文件。
+- **自定义主题与颜色**：主题分为监控和纯时钟两组，各组默认展示 3 个，点击箭头展开更多。监控组优先展示离子仪表、雷达终端、琥珀音响。支持颜色、图案和换页动画设置，也可以编辑主题文件添加新设计。
+- **网易云音乐与 Apple Music 歌词**：自动识别正在播放的播放器。网易云无需打开桌面歌词或停留在歌词页面；Windows 版 Apple Music 通过系统媒体控制获取歌曲与进度，再匹配在线歌词。支持时间调整及导入本地 LRC；Apple Music 自带歌词不直接读取，部分歌曲可能匹配不到。
 - **退出后恢复官方显示**：正常退出时恢复原厂时钟；程序意外退出后，音响也会在心跳超时后自动恢复。本机已分别测试这两种情况。
 - **便携、开源**：Windows 应用解压即可运行，主程序不需要管理员权限。项目原创代码开源。
 
@@ -30,7 +32,7 @@ HaloStudio 可以让 Edifier Halo PixelBar 显示网易云音乐歌词、电脑�
 - 音响内部传输速度有限，电脑无法像播放视频一样高帧率刷新整屏。目前流畅的切换动画需要安装本项目的显示固件。
 - 部分主题、字体和排版还不够美观；屏幕尺寸也限制了长歌词和复杂画面的显示。
 - 屏幕一次只能显示一种颜色，电脑预览和实屏可能有色差，不同设备也可能需要重新调整颜色。
-- 网易云更新后歌词同步可能需要适配；部分歌曲没有逐字时间或可用歌词，没有网络且没有缓存时也无法获取新歌词。
+- 播放器更新后歌词同步可能需要适配；Apple Music 需要可用的 Windows 媒体会话与进度，匹配歌词可能与播放版本不同；部分歌曲没有逐字时间或可用歌词，没有网络且没有缓存时也无法获取新歌词。
 - 温度、显卡和风扇信息取决于硬件及驱动支持，无法获取的项目会显示 `--`；独立 CPU 温度采集目前仅支持部分 AMD 平台。
 - 目前只在文末列出的环境和一台音响上测试，其他硬件批次或软件版本的表现尚不确定。
 
@@ -38,9 +40,9 @@ HaloStudio 可以让 Edifier Halo PixelBar 显示网易云音乐歌词、电脑�
 
 ### 1. 下载文件
 
-- [下载 HaloStudio C# 2.7.0（Windows x64）](https://github.com/woozyc/pixelbardiy/releases/download/v2.7.0/HaloStudio-CSharp-2.7.0-win64.zip)：日常使用的软件，已包含 .NET 运行环境。
+- [下载 HaloStudio C# 2.8.0（Windows x64）](https://github.com/woozyc/pixelbardiy/releases/download/v2.8.0/HaloStudio-CSharp-2.8.0-win64.zip)：日常使用的软件，已包含 .NET 运行环境。
 - [下载 MCU 固件与工程工具包 2.6.0](packages/HaloPixelBar-MCU-2.6.0.zip)：用于满足下述前提的固件更新和验证。
-- [v2.7.0 发布页](https://github.com/woozyc/pixelbardiy/releases/tag/v2.7.0) · [电脑端校验值](https://github.com/woozyc/pixelbardiy/releases/download/v2.7.0/SHA256SUMS.txt) · [固件包校验值](packages/HaloPixelBar-MCU-2.6.0.zip.sha256)。可用 PowerShell 的 `Get-FileHash 文件路径 -Algorithm SHA256` 对照。
+- [v2.8.0 发布页](https://github.com/woozyc/pixelbardiy/releases/tag/v2.8.0) · [电脑端校验值](https://github.com/woozyc/pixelbardiy/releases/download/v2.8.0/SHA256SUMS.txt) · [固件包校验值](packages/HaloPixelBar-MCU-2.6.0.zip.sha256)。可用 PowerShell 的 `Get-FileHash 文件路径 -Algorithm SHA256` 对照。
 
 ### 2. 确认固件与刷机前提
 
@@ -82,8 +84,8 @@ HaloStudio 可以让 Edifier Halo PixelBar 显示网易云音乐歌词、电脑�
 
 1. 完整解压应用 ZIP，运行 `HaloStudioNet/HaloStudioNet.exe`；不要把 EXE 单独移出文件夹。音响需连接电脑并处于**红灯 USB**模式。
 2. 在「设置 → 音响连接」导入这台音响已完成实屏验证的 `mcu-installation.json`。下载包不含个人设备记录；更换应用目录时可导入自己的记录。
-3. 在「主题与屏幕」选择主题、颜色，以及没有歌词时显示时钟还是系统监控；在「硬件监控」选择要显示的指标和布局。
-4. 在「主题与屏幕」将「播放音乐时」设为「自动显示歌词」，然后播放网易云音乐。在「音乐与灯光」可以调整歌词时间轴偏移或导入 LRC 文件；歌词默认提前约 0.8 秒刷新。
+3. 在「主题与屏幕」选择监控或时钟主题，点击各组下方箭头查看更多。「显示内容」决定空闲时显示什么；「画面样式与动效」调整排版、秒数与过渡。「主题配色」底部可展开 TempoHub 官方配色；在「硬件监控」选择指标和布局。
+4. 在「主题与屏幕」的「显示内容」里将「音乐播放时」设为「自动显示歌词」，然后用网易云音乐或 Windows 版 Apple Music 播放歌曲。在「音乐与灯光」可以调整歌词时间轴偏移或导入 LRC 文件；歌词默认提前约 0.8 秒刷新。
 5. 如需 CPU 温度，在「硬件监控」开启独立温度采集。此功能首次默认关闭；第一次开启需要确认一次 Windows 管理员授权，之后通常会复用授权。
 6. 如需游戏仪表，在「驾驶遥测」选择主题并开启接收；在地平线 6 中开启 Data Out，地址填 `127.0.0.1`、端口填 `20777`。没有游戏数据时仍显示日常内容；「遥测演示」可直接播放当前主题的零百加速动画，详见[遥测设置](halo-studio-dotnet/docs/FORZA_TELEMETRY.md)。
 7. 可在「设置」开启开机后台启动。关闭窗口会隐藏到托盘；需要停止控制并恢复官方显示时，请选择「退出并恢复原厂显示」。
@@ -130,12 +132,12 @@ HaloStudio 可以让 Edifier Halo PixelBar 显示网易云音乐歌词、电脑�
 | C# 源码编译 | Windows x64 + **.NET 10 SDK**（本机构建 10.0.401）；首次还原需网络。目标 API 版本为 Windows 10.0.19041，不能据此宣称旧系统已完整测试 |
 | 固件工程工具 | **Python 3.12 x64**、`legacy-python/requirements-dev.txt` 固定依赖（含 Unicorn 2.1.3、Keystone 0.9.2、Capstone 5.0.9、hidapi、PySide6、psutil）；另需自己的原厂包、镜像和备份记录，详见[完整命令流程](docs/FIRMWARE_USAGE.md) |
 
-应用包为 **2.7.0**，固件工具包仍为 **2.6.0** 发布资料；显示 MCU BIN 与 2.5.1 相同，已安装并验证相同 SHA 的设备**无需重新刷写**。本次地平线遥测只需更新电脑端。2026-10-29，使用者在真实地平线 6 游戏中确认自动进入遥测、退出遥测和显示动画均正常；游戏的具体构建号未记录。
+应用包为 **2.8.0**，固件工具包仍为 **2.6.0** 发布资料；显示 MCU BIN 与 2.5.1 相同，已安装并验证相同 SHA 的设备**无需重新刷写**。本次地平线遥测只需更新电脑端。2026-10-29，使用者在真实地平线 6 游戏中确认自动进入遥测、退出遥测和显示动画均正常；游戏的具体构建号未记录。
 
 ## 源码与验证
 
 ```text
-halo-studio-dotnet/   C# 2.7.0 客户端、外部主题/色表、15 套遥测仪表、MCU 扩展源码与报告
+halo-studio-dotnet/   C# 2.8.0 客户端、外部主题/色表、15 套遥测仪表、MCU 扩展源码与报告
 legacy-python/       Python 旧版、依赖、测试与固件实验基线
 docs/                MCU 动画、USB 协议与显示链路的实现原理
 firmware/            当前与历史显示 MCU 镜像、校验值

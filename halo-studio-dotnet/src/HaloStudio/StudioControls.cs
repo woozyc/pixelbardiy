@@ -140,13 +140,24 @@ public sealed class ThemeTile : Control
 public sealed class ThemeGallery : Panel
 {
     readonly int minimumTileWidth, tileHeight;
+    int displayLimit = int.MaxValue; bool arranging;
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public int DisplayLimit { get => displayLimit; set { displayLimit = Math.Max(0, value); PerformLayout(); } }
     public ThemeGallery(int minimumTileWidth = 290, int tileHeight = 164) { this.minimumTileWidth = minimumTileWidth; this.tileHeight = tileHeight; DoubleBuffered = true; ResizeRedraw = true; Margin = new(0, 0, 0, 8); }
     protected override void OnLayout(LayoutEventArgs e)
     {
+        if (arranging) return; arranging = true;
+        try {
         base.OnLayout(e); int gap = Palette.Px(this, 14), min = Palette.Px(this, minimumTileWidth), h = Palette.Px(this, tileHeight);
         int columns = Math.Clamp((Width + gap) / (min + gap), 1, 3), tileWidth = (Width - gap * (columns - 1)) / columns;
-        for (int i = 0; i < Controls.Count; i++) Controls[i].SetBounds(i % columns * (tileWidth + gap), i / columns * (h + gap), tileWidth, h);
-        int rows = (Controls.Count + columns - 1) / columns; int height = rows == 0 ? 0 : rows * (h + gap) - gap; if (Height != height) Height = height;
+        int count = Math.Min(Controls.Count, displayLimit);
+        for (int i = 0; i < Controls.Count; i++)
+        {
+            Controls[i].Visible = i < count;
+            if (i < count) Controls[i].SetBounds(i % columns * (tileWidth + gap), i / columns * (h + gap), tileWidth, h);
+        }
+        int rows = (count + columns - 1) / columns; int height = rows == 0 ? 0 : rows * (h + gap) - gap; if (Height != height) Height = height;
+        } finally { arranging = false; }
     }
 }
 public sealed class PixelPreview : Control

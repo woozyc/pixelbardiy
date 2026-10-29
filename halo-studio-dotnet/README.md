@@ -1,10 +1,20 @@
-# HaloStudio C# 2.7.0
+# HaloStudio C# 2.8.0
 
 > [!WARNING]
 > **非官方实验项目 · 设备损坏与变砖风险**
 > 本项目主要代码由 **GPT-6 Astra** 完成，结合作者在本机设备上的实验与反馈迭代。项目**尚未经过完整、全面的测试，不保证不会损坏设备**，也不保证适用于所有硬件批次、固件或播放器版本。固件/硬件版本不匹配、刷写中断及其他未知问题，可能导致音响无法启动、显示异常、变砖或其他设备损坏。已提供的备份与回退流程不是通用救砖保证，显示 MCU 完全失效后的独立 USB 恢复尚未验证。请先阅读适配条件、备份和恢复边界，自行评估并承担使用风险。遇到问题欢迎通过 [GitHub Issues](https://github.com/woozyc/pixelbardiy/issues) 反馈，附版本和复现步骤，并隐藏设备序列号、路径和个人信息。
 
-Halo PixelBar 的独立 Windows 客户端，采用 C# / .NET 10 / WinForms 重写。图形时钟、系统监控、网易云歌词及氛围灯直接通过 Windows API 和 USB HID 工作，无需 Python。原 Python 界面与功能保留，仅补充新固件兼容识别。
+Halo PixelBar 的独立 Windows 客户端，采用 C# / .NET 10 / WinForms 重写。图形时钟、系统监控、网易云 / Apple Music 歌词及氛围灯直接通过 Windows API 和 USB HID 工作，无需 Python。原 Python 界面与功能保留，仅补充新固件兼容识别。
+
+> 2.8.0 新增 Apple Music 歌词支持、更多监控与时钟主题，并重新整理主题与配色设置。已安装并验证当前 MCU 固件的设备无需重刷。
+
+## 主题、配色与音乐设置
+
+- 「监控主题」与「时钟主题」各默认显示 3 个，箭头展开其余。监控组的前三个为离子仪表、雷达终端、琥珀音响；按主题文件的监控能力自动归类，新加入的主题同样适用。
+- 选监控主题会开启系统监控，选纯时钟主题会切回时钟。「显示内容 → 空闲时显示」可将监控主题切回时钟；原有设置在升级时保留。折叠不改变当前选择。
+- 「显示内容」管理接管屏幕、空闲画面与音乐歌词优先级；「画面样式与动效」管理主题排版、秒数、图案动态和换页过渡。主题文件及重载入口移至「设置 → 创作与资源」。
+- TempoHub 的 30 个官方色收在「主题配色」底部，默认折叠。原厂 RGB 与校准色继续分别处理，白色校正不会作用于官方色。
+- 「音乐播放时 → 自动显示歌词」同时支持网易云和 Windows 版 Apple Music。后者通过 Windows 媒体会话读取歌曲与进度，再从网易云／LRCLIB 匹配歌词，也可导入 LRC。并非读取 Apple Music 内置歌词，版本匹配和时间轴可用性取决于播放器；当前音量律动采样仍限网易云。
 
 ## 2.7.0 地平线 6 驾驶遥测
 
@@ -37,7 +47,7 @@ Halo PixelBar 的独立 Windows 客户端，采用 C# / .NET 10 / WinForms 重�
 测试环境：Windows 11 专业版 x64，26H2 / **26300.9457**；网易云 **3.1.41.205564**；构建 SDK **.NET 10.0.401**。应用包自带 .NET 10，无需 Python、SDK 或 TrafficMonitor；在线取词需网络，温度驱动可能需 UAC，GPU 指标需 NVML。CPU 独立温度通道面向 AMD 17h/19h/1Ah，其余传感器取决于驱动支持。源码目标 API 10.0.19041 不表示所有旧版 Windows 已验证。固件工程才需要 Python 3.12 和固定工具依赖，详见 [固件命令流程](docs/FIRMWARE_USAGE.md)。
 ## 使用
 
-从 [v2.7.0 Release](https://github.com/woozyc/pixelbardiy/releases/tag/v2.7.0) 下载 Windows x64 ZIP 并完整解压，运行 `HaloStudioNet/HaloStudioNet.exe`。源码构建后的入口为 `dist/HaloStudioNet/HaloStudioNet.exe`。安装包随附 .NET 运行时，不需要另外安装 .NET。
+从 [v2.8.0 Release](https://github.com/woozyc/pixelbardiy/releases/tag/v2.8.0) 下载 Windows x64 ZIP 并完整解压，运行 `HaloStudioNet/HaloStudioNet.exe`。源码构建后的入口为 `dist/HaloStudioNet/HaloStudioNet.exe`。安装包随附 .NET 运行时，不需要另外安装 .NET。
 
 测试设备是 **花再 Halo PixelBar 2025 款常规版，USB 一线通**，2026-04-22 购入；不是强化版或 2026 款独立电源适配器型号。官方 2025 年说明书列出的参考型号为 EDF286015，本机铭牌编号未单独核对。
 
