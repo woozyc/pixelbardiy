@@ -21,6 +21,10 @@ public sealed record Settings
     public int Speed { get; init; } = 8;
     public bool AmbientEnabled { get; init; } = true;
     public string IdleContent { get; init; } = "clock";
+    // A missing field in pre-2.7 settings inherits the user's old idle choice.
+    bool? monitorEnabled;
+    public bool MonitorEnabled { get => monitorEnabled ?? IdleContent == "monitor"; init => monitorEnabled = value; }
+    [JsonIgnore] public bool WantsMonitor => Enabled && MonitorEnabled && (Designs.All.GetValueOrDefault(Theme)?.Monitor ?? false);
     public bool Themes { get; init; } = true;
     public string Theme { get; init; } = "kitty";
     public Dictionary<string, string> ThemeColors { get; init; } = [];
@@ -39,6 +43,9 @@ public sealed record Settings
     public bool MonitorRotate { get; init; } = true;
     public int RotationSeconds { get; init; } = 8;
     public string[] MonitorMetrics { get; init; } = ["cpu", "cpu_temp", "ram", "gpu0", "gpu0_temp", "download", "upload"];
+    // Only an explicit "apply" in the hardware page replaces the theme's curated
+    // dense slots; the default list must not rewrite a theme's dense design.
+    public bool MonitorMetricsCustom { get; init; }
     public Dictionary<string, double> FanLimits { get; init; } = [];
     public bool Rhythm { get; init; } = true;
     public string RhythmStyle { get; init; } = "pulse";
@@ -48,6 +55,7 @@ public sealed record Settings
     public string PixelTransition { get; init; } = "up";
     public Settings Validated() => this with
     {
+        MonitorEnabled = MonitorEnabled,
         TelemetryPort = TelemetryReceiver.ValidPort(TelemetryPort) ? TelemetryPort : 20777,
         TelemetryTheme = TelemetryDesigns.All.ContainsKey(TelemetryTheme) ? TelemetryTheme : TelemetryDesigns.All.Keys.FirstOrDefault() ?? TelemetryTheme,
         Theme = Designs.All.ContainsKey(Theme) ? Theme : Designs.All.Keys.FirstOrDefault() ?? Theme,

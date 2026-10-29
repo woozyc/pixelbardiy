@@ -5,6 +5,7 @@ public sealed partial class StudioForm
     void BuildDisplay()
     {
         var p = pages[0]; p.Controls.Add(gallery);
+        p.Controls.Add(Hint("开启硬件监控后，原有六套主题及新增监控主题显示监控；纯表盘主题继续显示时钟。"));
         var colors = Card(p, "主题配色", "色卡与预览依据实屏观感近似显示。整屏共色，每个主题独立保存。");
         colors.Controls.Add(colorStatus); colors.Controls.Add(colorChips); LoadColorChips();
         colors.Controls.Add(Row(Button("设备 RGB…", PickThemeColor), Button("恢复主题原色", () => SetThemeColor(null))));
@@ -13,10 +14,11 @@ public sealed partial class StudioForm
         Setting(colors, "白色偏蓝校正", "仅用于主题／校准白色；官方配色不受影响，255 为关闭", Number("白色蓝色分量", 0, 255, () => current.ScreenWhiteBlue, v => Set(current with { ScreenWhiteBlue = (int)v })));
         var daily = Card(p, "日常显示");
         Setting(daily, "屏幕显示", "关闭后恢复原厂时钟", Toggle("屏幕显示", () => current.Enabled, v => Set(current with { Enabled = v })));
-        Setting(daily, "默认画面", "没有歌词时显示的内容", Combo("默认画面", [("clock", "图形时钟"), ("monitor", "系统监控")], () => current.IdleContent, v => Set(current with { IdleContent = v })));
+        Setting(daily, "硬件监控", "开启后，带监控的主题显示监控仪表；关闭则显示表盘。不会自动轮换。", Toggle("显示硬件监控", () => current.MonitorEnabled, v => Set(current with { MonitorEnabled = v })));
         Setting(daily, "播放音乐时", "自动跟随网易云当前歌词", Combo("播放音乐时", [("auto", "自动显示歌词"), ("idle", "保持默认画面")], () => current.Mode, v => Set(current with { Mode = v })));
         Setting(daily, "秒数", "时钟显示秒数", Toggle("显示秒数", () => current.Seconds, v => Set(current with { Seconds = v })));
         Setting(daily, "主题设计", "使用选中主题的布局与装饰", Toggle("主题设计", () => current.Themes, v => Set(current with { Themes = v })));
+        daily.Controls.Add(Hint("关闭“硬件监控”即可显示时钟；“自动显示歌词”仍会在播放音乐时优先显示歌词。旧版的默认画面选择会自动保留。"));
         var motion = Card(p, "动画与创作");
         Setting(motion, "装饰动画", "让主题中的图案缓慢变化", Toggle("装饰动画", () => current.Animations, v => Set(current with { Animations = v })));
         Setting(motion, "切换动画", "画面轮换时使用 MCU 本地过渡", Toggle("切换动画", () => current.Transitions, v => Set(current with { Transitions = v })));
@@ -40,8 +42,9 @@ public sealed partial class StudioForm
         Setting(layout, "轮换指标", "按选择顺序轮流显示", Toggle("轮换指标", () => current.MonitorRotate, v => Set(current with { MonitorRotate = v })));
         Setting(layout, "轮换间隔", "单位：秒", Number("轮换间隔", 2, 120, () => current.RotationSeconds, v => Set(current with { RotationSeconds = (int)v })));
         layout.Controls.Add(Hint("网速按活动物理网卡统计，避免 VPN 重复计数；单位为字节/秒，屏幕 K/M 对应 KiB/s、MiB/s（1024 进制），不是 Mbps。"));
-        var selected = Card(p, "显示指标", "同类优先，余项就近配对；奇数时最后一项单独显示。可在列表内滚动。", maxHeight: 480); selected.Controls.Add(metrics);
-        selected.Controls.Add(Button("应用指标选择", () => Set(current with { MonitorMetrics = metrics.SelectedKeys })));
+        var selected = Card(p, "显示指标", "勾选后立即生效；紧凑两行布局会用所选指标替换主题槽位。同类优先，余项就近配对。", maxHeight: 480); selected.Controls.Add(metrics);
+        metrics.SelectionChanged += () => { if (!loading) Set(current with { MonitorMetrics = metrics.SelectedKeys, MonitorMetricsCustom = true }); };
+        selected.Controls.Add(Button("应用指标选择", () => Set(current with { MonitorMetrics = metrics.SelectedKeys, MonitorMetricsCustom = true })));
         var fans = Card(p, "风扇额定转速", "输入额定最大 RPM，用于计算相对转速百分比。"); fanKey.PlaceholderText = "传感器键，例如 gpu0_fan0"; fanMax.PlaceholderText = "最大 RPM";
         Setting(fans, "风扇传感器", "使用显示指标中的传感器键", new InputSurface(fanKey, 256));
         Setting(fans, "额定最大转速", "单位：RPM", new InputSurface(fanMax, 160));
